@@ -99,6 +99,18 @@
 	var/phasing_energy_drain = 200
 	var/phase_state = "" //icon_state when phasing
 
+	// Holding vars for cosmetic mods
+	var/base_applied = FALSE
+	var/basecoat_icon		// Base mech overlay (for colouring)
+	var/basecoat_colour = "#000000"
+
+	var/glow_applied = FALSE
+	var/glow_icon		// The basic glowing bits.
+	var/glow_colour = "#000000"
+
+	var/icon_decal_root	// Decals. Flame decals, anyone? Might have to make these as datums to hold colour info.
+	var/list/decalstrings
+
 	hud_possible = list (DIAG_STAT_HUD, DIAG_BATT_HUD, DIAG_MECH_HUD, DIAG_TRACK_HUD)
 
 /obj/mecha/Initialize()
@@ -124,6 +136,7 @@
 	diag_hud_set_mechcell()
 	diag_hud_set_mechstat()
 	diag_hud_set_mechtracking()
+	update_icon()
 
 	var/obj/item/mecha_modkit/voice/V = new starting_voice(src)
 	V.install(src)
@@ -132,6 +145,46 @@
 ////////////////////////
 ////// Helpers /////////
 ////////////////////////
+/obj/mecha/update_icon()
+	..()
+	overlays.Cut()
+	if(basecoat_icon && base_applied) // Apply basecoat first. Everything else stacks on top.
+		if(occupant)
+			overlays += create_decal("[basecoat_icon]", basecoat_colour)
+		else
+			overlays += create_decal("[basecoat_icon]-open", basecoat_colour)
+	if(glow_icon && glow_applied) // Glowy bits next, above the lighting plane.
+		if(occupant)
+			overlays += create_decal("[glow_icon]", glow_colour, glow = TRUE)
+		else
+			overlays += create_decal("[glow_icon]-open", glow_colour, glow = TRUE)
+	if(icon_decal_root && decalstrings) // Now apply all the decals in the list.
+		for(var/decal in decalstrings)
+			if(occupant)
+				overlays += create_decal("[icon_decal_root]-[decal]")
+			else
+				overlays += create_decal("[icon_decal_root]-[decal]-open")
+
+/obj/mecha/proc/create_decal(var/icon_name, var/added_colour = "#000000", var/glow = FALSE)
+	var/icon/I = new(icon, icon_name)
+	visible_message("Creating Icon ([icon], [icon_name]): Icon Available? ([I])")
+	var/icon_layer
+	var/icon_plane
+	if(glow)
+		icon_layer = ABOVE_LIGHTING_LAYER
+		icon_plane = ABOVE_LIGHTING_PLANE
+	else
+		icon_layer = FLOAT_LAYER
+		icon_plane = FLOAT_PLANE
+	visible_message("Icon Layers: [icon_layer]|[icon_plane]")
+	if(I)
+		visible_message("Blend: Icon [I] + [added_colour]")
+		I += added_colour //I.Blend(added_colour, ICON_ADD)
+		var/mutable_appearance/MA = mutable_appearance(I, "", icon_layer, icon_plane)
+		visible_message("Creating MA ([I], [icon_layer], [icon_plane])")
+		visible_message("MA created? ([MA])")
+		return MA
+	return
 
 /obj/mecha/get_cell()
 	return cell

@@ -17,6 +17,18 @@
 	var/cargo_capacity = 15
 	var/hides = 0
 
+	base_applied = TRUE
+	basecoat_icon = "ripley-shell"
+	//basecoat_colour = "#F2DC6A"
+	basecoat_colour = "#9E8816"
+
+	glow_applied = TRUE
+	glow_icon = "ripley-glow"
+	glow_colour = "#00AB00"
+
+	icon_decal_root	= "ripley-decal"
+	decalstrings = list()
+
 /obj/mecha/working/ripley/Move()
 	. = ..()
 	if(.)
@@ -55,7 +67,6 @@
 /obj/mecha/working/ripley/update_icon()
 	..()
 	if(hides)
-		cut_overlays()
 		if(hides < 3)
 			add_overlay(occupant ? "ripley-g" : "ripley-g-open")
 		else
