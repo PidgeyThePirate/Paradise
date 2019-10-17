@@ -62,8 +62,6 @@
     if(..())
         return 1
     if(!current_mecha.Adjacent(usr))
-        current_mecha = null
-        openUI(current_mecha, usr)
         return
     if(href_list["choice"])
         switch(href_list["choice"])
@@ -97,16 +95,12 @@
                         visible_message("[src]'s fine sprayers neatly trace a logo on the exosuit.")
                         playsound(loc, 'sound/effects/spray2.ogg', 50, 1, -6)
                         openUI(current_mecha, usr)
-                    else
-                        to_chat(user, "<span class='warning'>There is already a decal of that type on [current_mecha.name]!</span>")
             if("decal_syndicate")
                 if(current_mecha.Adjacent(usr))
                     if(!current_mecha.add_decal(new/obj/item/mecha_decal/syndicate_logo))
                         visible_message("[src]'s fine sprayers leave a glistening red symbol on the exosuit.")
                         playsound(loc, 'sound/effects/spray2.ogg', 50, 1, -6)
                         openUI(current_mecha, usr)
-                    else
-                        to_chat(user, "<span class='warning'>There is already a decal of that type on [current_mecha.name]!</span>")
             if("defaultdecals")
                 if(current_mecha.Adjacent(usr))
                     current_mecha.decals = current_mecha.default_decals
@@ -148,14 +142,14 @@
     var/decal_name                          // The name shown by the decal UI.
     var/mutable_colour = FALSE              // Whether the colour can be set. Off for things with a set colour, like the nanotrasen logo.
     var/glowing = FALSE                     // Determines the layer the overlays are placed on. Will shine in the dark if true.
-    var/toplayer = FALSE                    // Decals with this set to true will always appear above others (but will follow precedence with each other)
+    var/decal_layer = 1                     // The higher the decal layer, the less things will cover it.
     var/decal_colour = "#000000"            // If the colour can be set, it is read from here when determining overlays.
     var/list/obj/mecha/compatible_mecha     // Which mech types the kit can be applied to.
 
 /obj/item/mecha_decal/attack_obj(obj/O, mob/living/user)
     if(istype(O, /obj/mecha))
         var/obj/mecha/M = O
-        if(locate(M.type in compatible_mecha))
+        if(M.type in compatible_mecha)
             if(M.add_decal(src))
                 playsound(loc, 'sound/effects/spray2.ogg', 50, 1, -6)
                 to_chat(user, "<span class='notice'>You apply [src] to [M].</span>")
@@ -184,7 +178,7 @@
 /obj/item/compound_mecha_decal/attack_obj(obj/O, mob/living/user)
     if(istype(O, /obj/mecha))
         var/obj/mecha/M = O
-        if(decals && locate(M.type in compatible_mecha))
+        if(decals && (M.type in compatible_mecha))
             for(var/obj/item/mecha_decal/decal in decals)
                 M.add_decal(decal)
             playsound(loc, 'sound/effects/spray2.ogg', 50, 1, -6)
@@ -216,6 +210,7 @@
     desc = "Corporate approved!"
     decal_string = "nt_logo"
     decal_name = "Nanotrasen Logo"
+    decal_layer = 2
     mutable_colour = FALSE
     decal_colour = "#000000"  
     compatible_mecha = list(
@@ -228,6 +223,7 @@
     desc = "Goes best with black."
     decal_string = "syn_logo"
     decal_name = "Syndicate Logo"
+    decal_layer = 2
     mutable_colour = FALSE
     decal_colour = "#000000"  
     compatible_mecha = list(
@@ -241,7 +237,7 @@
     decal_string = "titan"
     decal_name = "Titan Skull"
     mutable_colour = FALSE
-    toplayer = TRUE
+    decal_layer = 3
     compatible_mecha = list(
         /obj/mecha/working/ripley,
         /obj/mecha/working/ripley/firefighter
@@ -254,7 +250,7 @@
     decal_name = "Titan Eyes"
     mutable_colour = TRUE
     glowing = TRUE
-    toplayer = TRUE
+    decal_layer = 4
     decal_colour = "#00AB00"
     compatible_mecha = list(
         /obj/mecha/working/ripley,

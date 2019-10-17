@@ -160,10 +160,10 @@
 			overlays += create_overlay("[glow_icon]-open", glow_colour, glow = TRUE)
 	if(icon_decal_root && decals) // Now apply all the decals in the list.
 		for(var/obj/item/mecha_decal/decal in decals)
-			overlays += get_decal_overlay(decal)
+			overlays += get_overlay_from_decal(decal)
 
-// Applies a decal to the mecha's overlays.
-/obj/mecha/proc/get_decal_overlay(var/obj/item/mecha_decal/decal)
+// Takes the data from the supplied decal and passes it into create_overlay, then returns the result as a Mutable Appearance.
+/obj/mecha/proc/get_overlay_from_decal(var/obj/item/mecha_decal/decal)
 	var/new_icon_name
 	if(occupant)
 		new_icon_name = "[icon_decal_root]-[decal.decal_string]"
@@ -171,30 +171,27 @@
 		new_icon_name = "[icon_decal_root]-[decal.decal_string]-open"
 
 	if(decal.mutable_colour)
-		return create_overlay(new_icon_name, decal.decal_colour, decal.glowing, decal.toplayer)
+		return create_overlay(new_icon_name, decal.decal_colour, decal.glowing, decal.decal_layer)
 	else
-		return create_overlay(new_icon_name, glow = decal.glowing, toplayer = decal.toplayer)
+		return create_overlay(new_icon_name, glow = decal.glowing, decal_layer = decal.decal_layer)
 
-// Creates the actual overlay to be added to the mech from the provided data.
-/obj/mecha/proc/create_overlay(var/icon_name, var/added_colour = "#000000", var/glow = FALSE, var/toplayer = FALSE)
+// Returns a Mutable Appearance based on icon_name to be applied to the base sprite as an overlay.
+/obj/mecha/proc/create_overlay(var/icon_name, var/added_colour = "#000000", var/glow = FALSE, var/decal_layer = 0)
 	var/icon/I = new(decal_icons, icon_name)
 	var/icon_layer
 	var/icon_plane
 	if(glow) // Will always be visible unless obscured by a top layer decal.
 		icon_layer = ABOVE_LIGHTING_LAYER
 		icon_plane = ABOVE_LIGHTING_PLANE
-		if(!toplayer)
-			for(var/obj/item/mecha_decal/decal in decals)
-				if(decal.toplayer)
-					I = get_icon_difference(I, decal)
-	else if(toplayer)	// Top-layer decals will always appear above other decals and will obscure glows.
-		icon_layer = FLOAT_LAYER + 1
-		icon_plane = FLOAT_PLANE
 	else
 		icon_layer = FLOAT_LAYER
 		icon_plane = FLOAT_PLANE
 	if(I)
 		I += added_colour
+		for(var/obj/item/mecha_decal/decal in decals)
+			if(decal.decal_layer > decal_layer)
+				var/icon/decalmask = new(decal.icon, decal.icon_state)
+				I = get_icon_difference(I, decalmask)
 		var/mutable_appearance/MA = mutable_appearance(I, "", icon_layer, icon_plane)
 		return MA
 	return

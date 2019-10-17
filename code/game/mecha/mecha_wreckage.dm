@@ -59,21 +59,19 @@
 	if(decals && decals.len > 0)
 		for(var/obj/item/mecha_decal/decal in decals)
 			if(decal.mutable_colour)
-				overlays += create_overlay(decal_icons, "[icon_decal_root]-[decal.decal_string]-broken", decal.decal_colour, decal.glowing, decal.toplayer)
+				overlays += create_overlay(decal_icons, "[icon_decal_root]-[decal.decal_string]-broken", decal.decal_colour, decal.glowing, decal.decal_layer)
 			else
-				overlays += create_overlay(decal_icons, "[icon_decal_root]-[decal.decal_string]-broken", "#000000", decal.glowing, decal.toplayer)
+				overlays += create_overlay(decal_icons, "[icon_decal_root]-[decal.decal_string]-broken", "#000000", decal.glowing, decal.decal_layer)
 
-/obj/structure/mecha_wreckage/proc/create_overlay(var/icon_file, var/icon_name, var/colour, var/glow = FALSE, var/toplayer = FALSE)
+/obj/structure/mecha_wreckage/proc/create_overlay(var/icon_file, var/icon_name, var/colour, var/glow = FALSE, var/decal_layer = 1)
 	var/icon/I = new(icon_file, icon_name)
 	I += colour
+	for(var/obj/item/mecha_decal/decal in decals)
+		if(decal.decal_layer > decal_layer)
+			var/icon/decalmask = new(decal.icon, decal.icon_state)
+			I = get_icon_difference(I, decalmask)
 	if(glow)
-		if(!toplayer)
-			for(var/obj/item/mecha_decal/decal in decals)
-				if(decal.toplayer)
-					I = get_icon_difference(I, decal)
 		overlays += mutable_appearance(I, "", ABOVE_LIGHTING_LAYER, ABOVE_LIGHTING_PLANE)
-	else if(toplayer)
-		overlays += mutable_appearance(I, "", FLOAT_LAYER + 1, FLOAT_PLANE)
 	else
 		overlays += mutable_appearance(I, "", FLOAT_LAYER, FLOAT_PLANE)
 
