@@ -100,16 +100,16 @@
 	var/phase_state = "" //icon_state when phasing
 
 	// Holding vars for cosmetic mods
-	var/base_applied = FALSE
 	var/basecoat_icon		// Base mech overlay (for colouring)
 	var/basecoat_colour = "#000000"
 
-	var/glow_applied = FALSE
 	var/glow_icon		// The basic glowing bits.
 	var/glow_colour = "#000000"
 
+	var/decal_icons = 'icons/mecha/mecha_decals.dmi'	// The file where the decal icons are stored. Seperated for neatness.
 	var/icon_decal_root	// Decals. Flame decals, anyone? Might have to make these as datums to hold colour info.
-	var/list/decalstrings
+	var/list/decals = list() 
+	var/list/default_decals = list() // Decals that come with the mech by default go here.
 
 	hud_possible = list (DIAG_STAT_HUD, DIAG_BATT_HUD, DIAG_MECH_HUD, DIAG_TRACK_HUD)
 
@@ -143,48 +143,91 @@
 	qdel(V)
 
 ////////////////////////
-////// Helpers /////////
+//// Mech Overlays /////
 ////////////////////////
 /obj/mecha/update_icon()
 	..()
 	overlays.Cut()
-	if(basecoat_icon && base_applied) // Apply basecoat first. Everything else stacks on top.
+	if(basecoat_icon) // Apply basecoat first. Everything else stacks on top.
 		if(occupant)
-			overlays += create_decal("[basecoat_icon]", basecoat_colour)
+			overlays += create_overlay("[basecoat_icon]", basecoat_colour)
 		else
-			overlays += create_decal("[basecoat_icon]-open", basecoat_colour)
-	if(glow_icon && glow_applied) // Glowy bits next, above the lighting plane.
+			overlays += create_overlay("[basecoat_icon]-open", basecoat_colour)
+	if(glow_icon) // Basic glowy bits next, above the lighting plane.
 		if(occupant)
-			overlays += create_decal("[glow_icon]", glow_colour, glow = TRUE)
+			overlays += create_overlay("[glow_icon]", glow_colour, glow = TRUE)
 		else
-			overlays += create_decal("[glow_icon]-open", glow_colour, glow = TRUE)
-	if(icon_decal_root && decalstrings) // Now apply all the decals in the list.
-		for(var/decal in decalstrings)
-			if(occupant)
-				overlays += create_decal("[icon_decal_root]-[decal]")
-			else
-				overlays += create_decal("[icon_decal_root]-[decal]-open")
+			overlays += create_overlay("[glow_icon]-open", glow_colour, glow = TRUE)
+	if(icon_decal_root && decals) // Now apply all the decals in the list.
+		for(var/obj/item/mecha_decal/decal in decals)
+			overlays += get_decal_overlay(decal)
 
-/obj/mecha/proc/create_decal(var/icon_name, var/added_colour = "#000000", var/glow = FALSE)
-	var/icon/I = new(icon, icon_name)
-	visible_message("Creating Icon ([icon], [icon_name]): Icon Available? ([I])")
+// Applies a decal to the mecha's overlays.
+/obj/mecha/proc/get_decal_overlay(var/obj/item/mecha_decal/decal)
+	var/new_icon_name
+	if(occupant)
+		new_icon_name = "[icon_decal_root]-[decal.decal_string]"
+	else
+		new_icon_name = "[icon_decal_root]-[decal.decal_string]-open"
+
+	if(decal.mutable_colour)
+		return create_overlay(new_icon_name, decal.decal_colour, decal.glowing, decal.toplayer)
+	else
+		return create_overlay(new_icon_name, glow = decal.glowing, toplayer = decal.toplayer)
+
+// Creates the actual overlay to be added to the mech from the provided data.
+/obj/mecha/proc/create_overlay(var/icon_name, var/added_colour = "#000000", var/glow = FALSE, var/toplayer = FALSE)
+	var/icon/I = new(decal_icons, icon_name)
 	var/icon_layer
 	var/icon_plane
-	if(glow)
+	if(glow) // Will always be visible unless obscured by a top layer decal.
 		icon_layer = ABOVE_LIGHTING_LAYER
 		icon_plane = ABOVE_LIGHTING_PLANE
+		if(!toplayer)
+			for(var/obj/item/mecha_decal/decal in decals)
+				if(decal.toplayer)
+					I = get_icon_difference(I, decal)
+	else if(toplayer)	// Top-layer decals will always appear above other decals and will obscure glows.
+		icon_layer = FLOAT_LAYER + 1
+		icon_plane = FLOAT_PLANE
 	else
 		icon_layer = FLOAT_LAYER
 		icon_plane = FLOAT_PLANE
-	visible_message("Icon Layers: [icon_layer]|[icon_plane]")
 	if(I)
-		visible_message("Blend: Icon [I] + [added_colour]")
-		I += added_colour //I.Blend(added_colour, ICON_ADD)
+		I += added_colour
 		var/mutable_appearance/MA = mutable_appearance(I, "", icon_layer, icon_plane)
-		visible_message("Creating MA ([I], [icon_layer], [icon_plane])")
-		visible_message("MA created? ([MA])")
 		return MA
 	return
+
+/obj/mecha/proc/add_decal(var/obj/item/mecha_decal/decal)
+	if(decals && !(locate(decal.type) in decals))
+		decals.Add(decal)
+		update_icon()
+		return TRUE
+	return FALSE
+
+/obj/mecha/proc/strip_decal(var/obj/item/mecha_decal/decal)
+	if(decals)
+		decals.Remove(decal)
+		update_icon()
+
+// Applies decals and colouring to wreckage on destruction.
+/obj/mecha/proc/paint_wreckage(var/obj/structure/mecha_wreckage/wreck)
+	if(wreckage && wreck)
+		wreck.basecoat_icon	= basecoat_icon					// Base mech overlay (for colouring)
+		wreck.basecoat_colour = basecoat_colour
+
+		wreck.glow_icon	= glow_icon							// The basic glowing bits.
+		wreck.glow_colour = glow_colour
+
+		wreck.decal_icons = 'icons/mecha/mecha_decals.dmi'	// The file where the decal icons are stored. Seperated for neatness.
+		wreck.icon_decal_root = icon_decal_root				// Decals. Flame decals, anyone?
+		wreck.decals = decals.Copy()
+		wreck.update_icon()
+
+////////////////////////
+////// Helpers /////////
+////////////////////////
 
 /obj/mecha/get_cell()
 	return cell
@@ -217,6 +260,8 @@
 
 /obj/mecha/examine(mob/user)
 	. = ..()
+	if(basecoat_colour && (basecoat_colour != initial(basecoat_colour) || decals.len > 0))
+		. += "<span class='notice'>It looks slightly different to the standard model.</span>"
 	var/integrity = obj_integrity * 100 / max_integrity
 	switch(integrity)
 		if(85 to 100)
@@ -1504,6 +1549,7 @@
 			AI = occupant
 			occupant = null
 		var/obj/structure/mecha_wreckage/WR = new wreckage(loc, AI)
+		paint_wreckage(WR)
 		for(var/obj/item/mecha_parts/mecha_equipment/E in equipment)
 			if(E.salvageable && prob(30))
 				WR.crowbar_salvage += E

@@ -17,6 +17,17 @@
 	var/mob/living/silicon/ai/AI //AIs to be salvaged
 	var/list/parts
 
+	// Holding vars for cosmetic mods
+	var/basecoat_icon		// Base mech overlay (for colouring)
+	var/basecoat_colour = "#000000"
+
+	var/glow_icon		// The basic glowing bits.
+	var/glow_colour = "#000000"
+
+	var/decal_icons = 'icons/mecha/mecha_decals.dmi'	// The file where the decal icons are stored. Seperated for neatness.
+	var/icon_decal_root	// Decals. Flame decals, anyone? Might have to make these as datums to hold colour info.
+	var/list/decals = list()
+
 /obj/structure/mecha_wreckage/Initialize(mapload, mob/living/silicon/ai/AI_pilot)
 	. = ..()
 	if(parts)
@@ -37,6 +48,35 @@
 	add_overlay(mutable_appearance('icons/obj/projectiles.dmi', "green_laser")) //Overlay for the recovery beacon
 	AI.controlled_mech = null
 	AI.remote_control = null
+
+/obj/structure/mecha_wreckage/update_icon()
+	..()
+	overlays.Cut()
+	if(basecoat_icon) // Apply basecoat first. Everything else stacks on top.
+		overlays += create_overlay(decal_icons, "[basecoat_icon]-broken", basecoat_colour)
+	if(glow_icon) // Basic glowy bits next, above the lighting plane.
+		overlays += create_overlay(decal_icons, "[glow_icon]-broken", glow_colour, glow = TRUE)
+	if(decals && decals.len > 0)
+		for(var/obj/item/mecha_decal/decal in decals)
+			if(decal.mutable_colour)
+				overlays += create_overlay(decal_icons, "[icon_decal_root]-[decal.decal_string]-broken", decal.decal_colour, decal.glowing, decal.toplayer)
+			else
+				overlays += create_overlay(decal_icons, "[icon_decal_root]-[decal.decal_string]-broken", "#000000", decal.glowing, decal.toplayer)
+
+/obj/structure/mecha_wreckage/proc/create_overlay(var/icon_file, var/icon_name, var/colour, var/glow = FALSE, var/toplayer = FALSE)
+	var/icon/I = new(icon_file, icon_name)
+	I += colour
+	if(glow)
+		if(!toplayer)
+			for(var/obj/item/mecha_decal/decal in decals)
+				if(decal.toplayer)
+					I = get_icon_difference(I, decal)
+		overlays += mutable_appearance(I, "", ABOVE_LIGHTING_LAYER, ABOVE_LIGHTING_PLANE)
+	else if(toplayer)
+		overlays += mutable_appearance(I, "", FLOAT_LAYER + 1, FLOAT_PLANE)
+	else
+		overlays += mutable_appearance(I, "", FLOAT_LAYER, FLOAT_PLANE)
+
 
 /obj/structure/mecha_wreckage/Destroy()
 	QDEL_NULL(AI)

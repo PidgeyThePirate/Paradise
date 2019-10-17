@@ -17,17 +17,14 @@
 	var/cargo_capacity = 15
 	var/hides = 0
 
-	base_applied = TRUE
 	basecoat_icon = "ripley-shell"
-	//basecoat_colour = "#F2DC6A"
 	basecoat_colour = "#9E8816"
 
-	glow_applied = TRUE
 	glow_icon = "ripley-glow"
 	glow_colour = "#00AB00"
 
 	icon_decal_root	= "ripley-decal"
-	decalstrings = list()
+	decals = list()
 
 /obj/mecha/working/ripley/Move()
 	. = ..()
@@ -84,6 +81,8 @@
 	armor = list("melee" = 40, "bullet" = 30, "laser" = 30, "energy" = 30, "bomb" = 60, "bio" = 0, "rad" = 70, "fire" = 100, "acid" = 100)
 	max_equip = 5 // More armor, less tools
 	wreckage = /obj/structure/mecha_wreckage/ripley/firefighter
+	basecoat_colour = "#495B41"
+	glow_colour = "#4B0000"
 
 /obj/mecha/working/ripley/deathripley
 	desc = "OH SHIT IT'S THE DEATHSQUAD WE'RE ALL GONNA DIE"
