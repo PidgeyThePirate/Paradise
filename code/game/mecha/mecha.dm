@@ -190,8 +190,8 @@
 		I += added_colour
 		for(var/obj/item/mecha_decal/decal in decals)
 			if(decal.decal_layer > decal_layer)
-				var/icon/decalmask = new(decal.icon, decal.icon_state)
-				I = get_icon_difference(I, decalmask)
+				var/icon/stencil_icon = new(decal_icons, occupant ? "[icon_decal_root]-[decal.decal_string]" : "[icon_decal_root]-[decal.decal_string]-open")
+				I = get_icon_difference(I, stencil_icon)
 		var/mutable_appearance/MA = mutable_appearance(I, "", icon_layer, icon_plane)
 		return MA
 	return
@@ -208,6 +208,12 @@
 		decals.Remove(decal)
 		update_icon()
 
+/obj/mecha/proc/check_decal_compatibility(var/obj/item/mecha_decal/decal)
+	if(src.type in decal.compatible_mecha)
+		return TRUE
+	else
+		return FALSE
+
 // Applies decals and colouring to wreckage on destruction.
 /obj/mecha/proc/paint_wreckage(var/obj/structure/mecha_wreckage/wreck)
 	if(wreckage && wreck)
@@ -217,7 +223,7 @@
 		wreck.glow_icon	= glow_icon							// The basic glowing bits.
 		wreck.glow_colour = glow_colour
 
-		wreck.decal_icons = 'icons/mecha/mecha_decals.dmi'	// The file where the decal icons are stored. Seperated for neatness.
+		wreck.decal_icons = decal_icons	// The file where the decal icons are stored. Seperated for neatness.
 		wreck.icon_decal_root = icon_decal_root				// Decals. Flame decals, anyone?
 		wreck.decals = decals.Copy()
 		wreck.update_icon()

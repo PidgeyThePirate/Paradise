@@ -68,8 +68,9 @@
 	I += colour
 	for(var/obj/item/mecha_decal/decal in decals)
 		if(decal.decal_layer > decal_layer)
-			var/icon/decalmask = new(decal.icon, decal.icon_state)
-			I = get_icon_difference(I, decalmask)
+			var/icon/stencil_icon = new(decal_icons, "[icon_decal_root]-[decal.decal_string]-broken")
+			if(stencil_icon)
+				I = get_icon_difference(I, stencil_icon)
 	if(glow)
 		overlays += mutable_appearance(I, "", ABOVE_LIGHTING_LAYER, ABOVE_LIGHTING_PLANE)
 	else
