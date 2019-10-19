@@ -52,7 +52,7 @@
 ////////////////////
 // DECAL OVERLAYS //
 ////////////////////
-// See mecha_decal_kits.dm for more info.
+// See mecha_decals.dm for more info.
 
 /obj/structure/mecha_wreckage/update_icon()
 	..()

@@ -2,7 +2,7 @@
 	desc = "Autonomous Power Loader Unit. This newer model is refitted with powerful armour against the dangers of the EVA mining process."
 	name = "APLU \"Ripley\""
 	icon_state = "ripley"
-	initial_icon = "ripley"
+	base_icon_state = "ripley"
 	step_in = 4 //Move speed, lower is faster.
 	var/fast_pressure_step_in = 2 //step_in while in normal pressure conditions
 	var/slow_pressure_step_in = 4 //step_in while in better pressure conditions
@@ -73,7 +73,7 @@
 	desc = "Standart APLU chassis was refitted with additional thermal protection and cistern."
 	name = "APLU \"Firefighter\""
 	icon_state = "firefighter"
-	initial_icon = "firefighter"
+	base_icon_state = "firefighter"
 	max_temperature = 65000
 	max_integrity = 250
 	resistance_flags = LAVA_PROOF | FIRE_PROOF | ACID_PROOF
@@ -87,8 +87,7 @@
 /obj/mecha/working/ripley/deathripley
 	desc = "OH SHIT IT'S THE DEATHSQUAD WE'RE ALL GONNA DIE"
 	name = "DEATH-RIPLEY"
-	icon_state = "deathripley"
-	initial_icon = "deathripley"
+	base_icon_state = "deathripley"
 	step_in = 3
 	slow_pressure_step_in = 3
 	opacity=0

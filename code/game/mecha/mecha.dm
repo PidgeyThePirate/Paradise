@@ -19,7 +19,6 @@
 	armor = list(melee = 20, bullet = 10, laser = 0, energy = 0, bomb = 0, bio = 0, rad = 0, fire = 100, acid = 100)
 	var/list/facing_modifiers = list(MECHA_FRONT_ARMOUR = 1.5, MECHA_SIDE_ARMOUR = 1, MECHA_BACK_ARMOUR = 0.5)
 	var/ruin_mecha = FALSE //if the mecha starts on a ruin, don't automatically give it a tracking beacon to prevent metagaming.
-	var/initial_icon = null //Mech type for resetting icon. Only used for reskinning kits (see custom items)
 	var/can_move = 0 // time of next allowed movement
 	var/mob/living/carbon/occupant = null
 	var/step_in = 10 //make a step in step_in/10 sec.
@@ -99,6 +98,8 @@
 	var/phasing_energy_drain = 200
 	var/phase_state = "" //icon_state when phasing
 
+	var/base_icon_state
+
 	// Holding vars for cosmetic mods
 	var/cosmetics_enabled = TRUE // If false, will not show overlays nor open the paintgun UI.
 	var/basecoat_icon		// Base mech overlay (for colouring)
@@ -117,7 +118,7 @@
 /obj/mecha/Initialize()
 	. = ..()
 	events = new
-	icon_state += "-open"
+	update_icon()
 	add_radio()
 	add_cabin()
 	add_airtank()
@@ -146,12 +147,13 @@
 ////////////////////////
 //// Mech Overlays /////
 ////////////////////////
-// See mecha_decal_kits.dm for more info.
+// See mecha_decals.dm for more info.
 
 /obj/mecha/update_icon()
 	. = ..()
 	overlays.Cut()
-	if(!cosmetics_enabled)
+	icon_state = (occupant ? "[base_icon_state]" : "[base_icon_state]-open")
+	if(!cosmetics_enabled) // Stop here if the cosmetics system is disabled (as with the legacy "paint kits")
 		return
 	if(basecoat_icon) // Apply basecoat first. Everything else stacks on top.
 		if(occupant)
@@ -236,6 +238,8 @@
 
 // Applies decals and colouring to wreckage on destruction.
 /obj/mecha/proc/paint_wreckage(var/obj/structure/mecha_wreckage/wreck)
+	wreck.icon_state = "[base_icon_state]-broken"
+
 	if(wreckage && wreck && cosmetics_enabled)
 		// Cut out all the decals that have no broken state.
 		for(var/datum/mecha/mecha_decal/decal in decals)
@@ -729,7 +733,7 @@
 /obj/mecha/handle_atom_del(atom/A)
 	if(A == occupant)
 		occupant = null
-		icon_state = initial(icon_state)+"-open"
+		update_icon()
 		setDir(dir_in)
 
 /obj/mecha/Destroy()
@@ -914,16 +918,16 @@
 
 // Legacy support: adding paintkits disables the cosmetic modification system. 
 // Still has some use for major visual overhauls.
-	else if(istype(W, /obj/item/paintkit))
+	else if(istype(W, /obj/item/overhaul_kit))
 		if(occupant)
 			to_chat(user, "You can't customize a mech while someone is piloting it - that would be unsafe!")
 			return
 
-		var/obj/item/paintkit/P = W
+		var/obj/item/overhaul_kit/P = W
 		var/found = null
 
 		for(var/type in P.allowed_types)
-			if(type == initial_icon)
+			if(type == base_icon_state)
 				found = 1
 				break
 
@@ -935,8 +939,8 @@
 		cosmetics_enabled = FALSE
 		name = P.new_name
 		desc = P.new_desc
-		initial_icon = P.new_icon
-		reset_icon()
+		base_icon_state = P.new_icon
+		update_icon()
 
 		user.drop_item()
 		qdel(P)
@@ -1023,7 +1027,7 @@
 			occupant = null
 			AI.controlled_mech = null
 			AI.remote_control = null
-			icon_state = initial(icon_state)+"-open"
+			update_icon()
 			to_chat(AI, "You have been downloaded to a mobile storage device. Wireless connection offline.")
 			to_chat(user, "<span class='boldnotice'>Transfer successful</span>: [AI.name] ([rand(1000,9999)].exe) removed from [name] and stored within local memory.")
 
@@ -1057,7 +1061,7 @@
 	AI.aiRestorePowerRoutine = 0
 	AI.loc = src
 	occupant = AI
-	icon_state = initial(icon_state)
+	update_icon()
 	playsound(src, 'sound/machines/windowdoor.ogg', 50, 1)
 	if(!hasInternalDamage())
 		occupant << sound(nominalsound, volume = 50)
@@ -1211,7 +1215,7 @@
 		GrantActions(H, human_occupant = 1)
 		forceMove(loc)
 		log_append_to_last("[H] moved in as pilot.")
-		icon_state = reset_icon()
+		update_icon()
 		dir = dir_in
 		playsound(src, 'sound/machines/windowdoor.ogg', 50, 1)
 		if(!activated)
@@ -1272,7 +1276,7 @@
 		mmi_as_oc.mecha = src
 		Entered(mmi_as_oc)
 		Move(loc)
-		icon_state = reset_icon()
+		update_icon()
 		dir = dir_in
 		log_message("[mmi_as_oc] moved in as pilot.")
 		if(!hasInternalDamage())
@@ -1353,7 +1357,7 @@
 				var/obj/item/mmi/robotic_brain/R = mmi
 				if(R.imprinted_master)
 					to_chat(L, "<span class='notice'>Imprint re-enabled, you are once again bound to [R.imprinted_master]'s commands.</span>")
-		icon_state = initial(icon_state)+"-open"
+		update_icon()
 		dir = dir_in
 
 	if(L && L.client)
@@ -1452,14 +1456,6 @@
 				occupant.throw_alert("charge", /obj/screen/alert/mech_emptycell)
 	else
 		occupant.throw_alert("charge", /obj/screen/alert/mech_nocell)
-
-/obj/mecha/proc/reset_icon()
-	if(initial_icon)
-		icon_state = initial_icon
-		update_icon()
-	else
-		icon_state = initial(icon_state)
-	return icon_state
 
 //////////////////////////////////////////
 ////////  Mecha global iterators  ////////

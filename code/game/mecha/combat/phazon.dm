@@ -2,7 +2,7 @@
 	desc = "An exosuit which can only be described as 'WTF?'."
 	name = "Phazon"
 	icon_state = "phazon"
-	initial_icon = "phazon"
+	base_icon_state = "phazon"
 	step_in = 2
 	dir_in = 2 //Facing south.
 	step_energy_drain = 3
