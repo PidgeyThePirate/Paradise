@@ -345,6 +345,7 @@
     desc = "A small storage device containing an elaborate exosuit decal pattern. Load it into an exosuit paint gun."
     icon = 'icons/obj/module.dmi'
     icon_state = "harddisk_mini"
+    w_class = WEIGHT_CLASS_TINY
 
     var/decal_name                                      // The name shown by the decal UI.
     var/list/datum/mecha/mecha_decal/decals             // Contained decals
