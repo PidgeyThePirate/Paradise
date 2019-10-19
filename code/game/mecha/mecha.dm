@@ -100,6 +100,7 @@
 	var/phase_state = "" //icon_state when phasing
 
 	// Holding vars for cosmetic mods
+	var/cosmetics_enabled = TRUE // If false, will not show overlays nor open the paintgun UI.
 	var/basecoat_icon		// Base mech overlay (for colouring)
 	var/basecoat_colour = "#000000"
 
@@ -108,8 +109,8 @@
 
 	var/decal_icons = 'icons/mecha/mecha_decals.dmi'	// The file where the decal icons are stored. Seperated for neatness.
 	var/icon_decal_root	// Decals. Flame decals, anyone? Might have to make these as datums to hold colour info.
-	var/list/decals = list() 
-	var/list/default_decals = list() // Decals that come with the mech by default go here.
+	var/list/datum/mecha/mecha_decal/decals = list() 
+	var/list/datum/mecha/mecha_decal/default_decals = list() // Decals that come with the mech by default go here.
 
 	hud_possible = list (DIAG_STAT_HUD, DIAG_BATT_HUD, DIAG_MECH_HUD, DIAG_TRACK_HUD)
 
@@ -145,9 +146,13 @@
 ////////////////////////
 //// Mech Overlays /////
 ////////////////////////
+// See mecha_decal_kits.dm for more info.
+
 /obj/mecha/update_icon()
-	..()
+	. = ..()
 	overlays.Cut()
+	if(!cosmetics_enabled)
+		return
 	if(basecoat_icon) // Apply basecoat first. Everything else stacks on top.
 		if(occupant)
 			overlays += create_overlay("[basecoat_icon]", basecoat_colour)
@@ -159,11 +164,16 @@
 		else
 			overlays += create_overlay("[glow_icon]-open", glow_colour, glow = TRUE)
 	if(icon_decal_root && decals) // Now apply all the decals in the list.
-		for(var/obj/item/mecha_decal/decal in decals)
+		for(var/datum/mecha/mecha_decal/decal in decals)
 			overlays += get_overlay_from_decal(decal)
 
 // Takes the data from the supplied decal and passes it into create_overlay, then returns the result as a Mutable Appearance.
-/obj/mecha/proc/get_overlay_from_decal(var/obj/item/mecha_decal/decal)
+/obj/mecha/proc/get_overlay_from_decal(var/datum/mecha/mecha_decal/decal)
+	// Doesn't process overlays with invalid icon states to save some time.
+	if(occupant && !decal.has_state_occupied) 
+		return
+	if(!occupant && !decal.has_state_open)
+		return
 	var/new_icon_name
 	if(occupant)
 		new_icon_name = "[icon_decal_root]-[decal.decal_string]"
@@ -180,7 +190,9 @@
 	var/icon/I = new(decal_icons, icon_name)
 	var/icon_layer
 	var/icon_plane
-	if(glow) // Will always be visible unless obscured by a top layer decal.
+	// Glow decals will always be visible unless obscured by a higher layer decal. Engine limitations means that the glow will render on top of everything else too; hopefully won't be too much of a problem.
+	// BYOND 513 adds a feature for this; should return to it when paracode goes to 513.
+	if(glow) 
 		icon_layer = ABOVE_LIGHTING_LAYER
 		icon_plane = ABOVE_LIGHTING_PLANE
 	else
@@ -188,7 +200,12 @@
 		icon_plane = FLOAT_PLANE
 	if(I)
 		I += added_colour
-		for(var/obj/item/mecha_decal/decal in decals)
+		for(var/datum/mecha/mecha_decal/decal in decals)
+			// Stops invalid icon states from wreaking havoc.
+			if(occupant && !decal.has_state_occupied)
+				continue
+			if(!occupant && !decal.has_state_open)
+				continue
 			if(decal.decal_layer > decal_layer)
 				var/icon/stencil_icon = new(decal_icons, occupant ? "[icon_decal_root]-[decal.decal_string]" : "[icon_decal_root]-[decal.decal_string]-open")
 				I = get_icon_difference(I, stencil_icon)
@@ -196,36 +213,43 @@
 		return MA
 	return
 
-/obj/mecha/proc/add_decal(var/obj/item/mecha_decal/decal)
-	if(decals && !(locate(decal.type) in decals))
-		decals.Add(decal)
-		update_icon()
-		return TRUE
-	return FALSE
+/obj/mecha/proc/add_decal(var/datum/mecha/mecha_decal/decal)
+	for(var/datum/mecha/mecha_decal/checked_decal in decals)
+		if(checked_decal.decal_string == decal.decal_string)
+			return FALSE
+	decals.Add(decal)
+	update_icon()
+	return TRUE
 
-/obj/mecha/proc/strip_decal(var/obj/item/mecha_decal/decal)
+/obj/mecha/proc/strip_decal(var/datum/mecha/mecha_decal/decal)
 	if(decals)
 		decals.Remove(decal)
 		update_icon()
 
-/obj/mecha/proc/check_decal_compatibility(var/obj/item/mecha_decal/decal)
-	if(src.type in decal.compatible_mecha)
-		return TRUE
-	else
-		return FALSE
+// Returns a list of decal strings for easy comparison.
+/obj/mecha/proc/get_decal_strings()
+    var/list/decalstrings = list()
+    if(decals.len)
+        for(var/datum/mecha/mecha_decal/MD in decals)
+            decalstrings.Add(MD.decal_string)
+    return decalstrings
 
 // Applies decals and colouring to wreckage on destruction.
 /obj/mecha/proc/paint_wreckage(var/obj/structure/mecha_wreckage/wreck)
-	if(wreckage && wreck)
-		wreck.basecoat_icon	= basecoat_icon					// Base mech overlay (for colouring)
+	if(wreckage && wreck && cosmetics_enabled)
+		// Cut out all the decals that have no broken state.
+		for(var/datum/mecha/mecha_decal/decal in decals)
+			if(decal.has_state_broken)
+				wreck.decals.Add(decal.clone())
+
+		wreck.basecoat_icon	= basecoat_icon
 		wreck.basecoat_colour = basecoat_colour
 
-		wreck.glow_icon	= glow_icon							// The basic glowing bits.
+		wreck.glow_icon	= glow_icon
 		wreck.glow_colour = glow_colour
 
-		wreck.decal_icons = decal_icons	// The file where the decal icons are stored. Seperated for neatness.
-		wreck.icon_decal_root = icon_decal_root				// Decals. Flame decals, anyone?
-		wreck.decals = decals.Copy()
+		wreck.decal_icons = decal_icons
+		wreck.icon_decal_root = icon_decal_root	
 		wreck.update_icon()
 
 ////////////////////////
@@ -888,6 +912,8 @@
 		diag_hud_set_mechtracking()
 		return
 
+// Legacy support: adding paintkits disables the cosmetic modification system. 
+// Still has some use for major visual overhauls.
 	else if(istype(W, /obj/item/paintkit))
 		if(occupant)
 			to_chat(user, "You can't customize a mech while someone is piloting it - that would be unsafe!")
@@ -906,7 +932,7 @@
 			return
 
 		user.visible_message("[user] opens [P] and spends some quality time customising [src].")
-
+		cosmetics_enabled = FALSE
 		name = P.new_name
 		desc = P.new_desc
 		initial_icon = P.new_icon
@@ -1430,6 +1456,7 @@
 /obj/mecha/proc/reset_icon()
 	if(initial_icon)
 		icon_state = initial_icon
+		update_icon()
 	else
 		icon_state = initial(icon_state)
 	return icon_state

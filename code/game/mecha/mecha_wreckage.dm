@@ -49,6 +49,11 @@
 	AI.controlled_mech = null
 	AI.remote_control = null
 
+////////////////////
+// DECAL OVERLAYS //
+////////////////////
+// See mecha_decal_kits.dm for more info.
+
 /obj/structure/mecha_wreckage/update_icon()
 	..()
 	overlays.Cut()
@@ -57,7 +62,7 @@
 	if(glow_icon) // Basic glowy bits next, above the lighting plane.
 		overlays += create_overlay(decal_icons, "[glow_icon]-broken", glow_colour, glow = TRUE)
 	if(decals && decals.len > 0)
-		for(var/obj/item/mecha_decal/decal in decals)
+		for(var/datum/mecha/mecha_decal/decal in decals)
 			if(decal.mutable_colour)
 				overlays += create_overlay(decal_icons, "[icon_decal_root]-[decal.decal_string]-broken", decal.decal_colour, decal.glowing, decal.decal_layer)
 			else
@@ -66,7 +71,7 @@
 /obj/structure/mecha_wreckage/proc/create_overlay(var/icon_file, var/icon_name, var/colour, var/glow = FALSE, var/decal_layer = 1)
 	var/icon/I = new(icon_file, icon_name)
 	I += colour
-	for(var/obj/item/mecha_decal/decal in decals)
+	for(var/datum/mecha/mecha_decal/decal in decals)
 		if(decal.decal_layer > decal_layer)
 			var/icon/stencil_icon = new(decal_icons, "[icon_decal_root]-[decal.decal_string]-broken")
 			if(stencil_icon)
@@ -75,7 +80,6 @@
 		overlays += mutable_appearance(I, "", ABOVE_LIGHTING_LAYER, ABOVE_LIGHTING_PLANE)
 	else
 		overlays += mutable_appearance(I, "", FLOAT_LAYER, FLOAT_PLANE)
-
 
 /obj/structure/mecha_wreckage/Destroy()
 	QDEL_NULL(AI)
